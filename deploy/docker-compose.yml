@@ -1,0 +1,123 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: coworking_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-coworking_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-coworking_password}
+      POSTGRES_DB: ${POSTGRES_DB:-coworking_db}
+      POSTGRES_HOST_AUTH_METHOD: trust
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../backend/app/core/db.sql:/docker-entrypoint-initdb.d/init-db.sql
+    networks:
+      - coworking_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-coworking_user}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: coworking_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - coworking_network
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    container_name: coworking_backend
+    environment:
+      - ENVIRONMENT=development
+      - DATABASE_URL=postgresql://${POSTGRES_USER:-coworking_user}:${POSTGRES_PASSWORD:-coworking_password}@postgres:5432/${POSTGRES_DB:-coworking_db}
+      - REDIS_URL=redis://redis:6379/0
+      - SECRET_KEY=${SECRET_KEY:-dev_secret_key_change_in_production}
+      - POSTGRES_SERVER=postgres
+      - POSTGRES_USER=${POSTGRES_USER:-coworking_user}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-coworking_password}
+      - POSTGRES_DB=${POSTGRES_DB:-coworking_db}
+      - REDIS_HOST=redis
+      - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8000"]
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../backend:/app
+      - /app/__pycache__
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - coworking_network
+    command: /app/scripts/start.sh
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ../frontend
+    container_name: coworking_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - coworking_network
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: coworking_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@coworking.com}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+    networks:
+      - coworking_network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: coworking_redis_commander
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    ports:
+      - "8081:8081"
+    depends_on:
+      - redis
+    networks:
+      - coworking_network
+    restart: unless-stopped
+
+networks:
+  coworking_network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  pgadmin_data:
