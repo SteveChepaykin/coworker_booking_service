@@ -45,12 +45,22 @@ class BookingOut(BaseModel):
 def read_bookings(
     db: Session = Depends(get_db),
     skip: int = 0,
-    limit: int = 100
+    limit: int = 100,
+    user_id: Optional[uuid.UUID] = None,
+    future_only: bool = False
 ):
     """
     Retrieve bookings with pagination.
     """
-    bookings = db.query(Booking).offset(skip).limit(limit).all()
+    query = db.query(Booking)
+
+    if user_id:
+        query = query.filter(Booking.user_id == user_id)
+    
+    if future_only:
+        query = query.filter(Booking.start_time > datetime.utcnow())
+
+    bookings = query.order_by(Booking.start_time.asc()).offset(skip).limit(limit).all()
     return bookings
 
 @router.post("/", response_model=BookingOut, status_code=status.HTTP_201_CREATED)
@@ -61,12 +71,10 @@ def create_booking(
     """
     Create a new booking.
     """
-    # Check if room exists and is active
     room = db.query(Room).filter(Room.id == booking.room_id, Room.is_active == True).first()
     if not room:
         raise HTTPException(status_code=404, detail="Active room not found")
-
-    # Check for overlapping bookings
+    
     overlapping_booking = db.query(Booking).filter(
         Booking.room_id == booking.room_id,
         Booking.end_time > booking.start_time,

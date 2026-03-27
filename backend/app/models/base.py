@@ -1,4 +1,3 @@
-# backend/app/models/base.py
 from sqlalchemy import Column, DateTime, Boolean, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declared_attr

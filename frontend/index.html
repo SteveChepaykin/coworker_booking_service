@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coworking Room Booker</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="app.js" defer></script>
+</head>
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Coworking Room Booker</h1>
+        </header>
+
+        <main class="content-wrapper">
+            <div class="list-section">
+                <section id="spaces-section">
+                    <h2>1. Select a Coworking Space</h2>
+                    <div id="spaces-loader" class="loader"></div>
+                    <p id="spaces-error" class="error-message hidden"></p>
+                    <ul id="spaces-list" class="item-list"></ul>
+                </section>
+
+                <section id="rooms-section" class="hidden">
+                    <h2>2. Select a Room in <span id="selected-space-name"></span></h2>
+                    <div id="rooms-loader" class="loader hidden"></div>
+                    <p id="rooms-error" class="error-message hidden"></p>
+                    <ul id="rooms-list" class="item-list"></ul>
+                </section>
+            </div>
+
+            <div class="bookings-section">
+                <section id="my-bookings-section">
+                    <h2>My Upcoming Bookings</h2>
+                    <div id="bookings-loader" class="loader"></div>
+                    <p id="bookings-error" class.="error-message hidden"></p>
+                    <ul id="my-bookings-list" class="item-list"></ul>
+                </section>
+            </div>
+        </main>
+    </div>
+
+    <!-- Booking Modal -->
+    <div id="booking-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content" role="dialog" aria-labelledby="modal-title" aria-modal="true">
+            <button class="close-button" aria-label="Close modal">&times;</button>
+            <h2 id="modal-title">Book Room: <span id="modal-room-name"></span></h2>
+            <div id="modal-loader" class="loader hidden"></div>
+            <p id="modal-error" class="error-message hidden"></p>
+            <form id="booking-form" novalidate>
+                <input type="hidden" id="modal-room-id" name="roomId">
+                <div class="form-group">
+                    <label for="start-time">Start Time:</label>
+                    <input type="datetime-local" id="start-time" name="startTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="end-time">End Time:</label>
+                    <input type="datetime-local" id="end-time" name="endTime" required>
+                </div>
+                <div class="form-group">
+                    <label for="purpose">Purpose:</label>
+                    <input type="text" id="purpose" name="purpose" placeholder="e.g., Team Meeting">
+                </div>
+                <button type="submit" id="confirm-booking-btn">Confirm Booking</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- HTML Templates -->
+    <template id="space-item-template">
+        <li class="item" tabindex="0">
+            <span class="item-name"></span>
+            <span class="item-detail"></span>
+        </li>
+    </template>
+
+    <template id="room-item-template">
+        <li class="item bookable" tabindex="0">
+            <span class="item-name"></span>
+            <span class="item-detail"></span>
+        </li>
+    </template>
+
+    <template id="booking-item-template">
+        <li class="booking-item"></li>
+    </template>
+</body>
+</html>

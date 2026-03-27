@@ -9,6 +9,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_HOST_AUTH_METHOD: trust
     ports:
       - "5432:5432"
     volumes:
@@ -21,7 +22,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: always
+    restart: unless-stopped
 
   redis:
     image: redis:7-alpine
@@ -38,7 +39,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
-    restart: always
+    restart: unless-stopped
 
   backend:
     build:
@@ -53,7 +54,7 @@ services:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_DB=${POSTGRES_DB}
       - REDIS_HOST=redis
-      - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8000"]
+      - BACKEND_CORS_ORIGINS=["http://localhost:3030","http://localhost:8080"]
     ports:
       - "8000:8000"
     volumes:
@@ -67,7 +68,7 @@ services:
     networks:
       - coworking_network
     command: /app/scripts/start.sh
-    restart: always
+    restart: unless-stopped
 
   frontend:
     build:
@@ -81,7 +82,7 @@ services:
       - ../frontend:/usr/share/nginx/html:ro
     networks:
       - coworking_network
-    restart: always
+    restart: unless-stopped
 
   pgadmin:
     image: dpage/pgadmin4
@@ -98,7 +99,7 @@ services:
       - postgres
     networks:
       - coworking_network
-    restart: always
+    restart: unless-stopped
 
   redis-commander:
     image: rediscommander/redis-commander:latest
@@ -111,7 +112,7 @@ services:
       - redis
     networks:
       - coworking_network
-    restart: always
+    restart: unless-stopped
 
 networks:
   coworking_network:

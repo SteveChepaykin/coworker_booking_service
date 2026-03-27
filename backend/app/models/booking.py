@@ -1,7 +1,6 @@
-# backend/app/models/booking.py
 from sqlalchemy import Column, String, DateTime, Text, Integer, ForeignKey, CheckConstraint, Index
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import UUID, EXCLUDE
 from sqlalchemy.sql import expression
 
 from .base import BaseModel
@@ -19,7 +18,6 @@ class Booking(BaseModel):
     purpose = Column(Text)
     guest_count = Column(Integer, default=1)
     
-    # Relationships
     user = relationship("User", back_populates="bookings")
     room = relationship("Room", back_populates="bookings")
     
@@ -29,16 +27,18 @@ class Booking(BaseModel):
         CheckConstraint('EXTRACT(MINUTE FROM end_time) % 15 = 0', name='check_end_time_interval'),
         CheckConstraint('guest_count >= 1', name='check_guest_count_positive'),
         
-        # Indexes
         Index('ix_bookings_user_id', 'user_id'),
         Index('ix_bookings_room_id', 'room_id'),
         Index('ix_bookings_status', 'status'),
         Index('ix_bookings_time_range', 'room_id', 'start_time', 'end_time'),
         Index('ix_bookings_is_deleted', 'is_deleted'),
-        Index('ix_bookings_user_active', 'user_id', 'is_deleted', 'status'),  # For user's active bookings
-        
-        # Exclusion constraint for overlapping active bookings (excluding soft-deleted)
-        # Note: This requires PostgreSQL extension, we'll handle this in application logic
+        Index('ix_bookings_user_active', 'user_id', 'is_deleted', 'status'),
+        EXCLUDE(
+            ('room_id', '='),
+            (expression.text('tsrange(start_time, end_time)'), '&&'),
+            where=expression.text("status = 'confirmed' AND is_deleted = false"),
+            name='exclude_overlapping_bookings'
+        ),
     )
     
     @property
