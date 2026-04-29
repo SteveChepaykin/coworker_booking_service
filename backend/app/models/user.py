@@ -20,10 +20,7 @@ class User(BaseModel):
     
     last_login = Column(DateTime(timezone=True))
     
-    # Relationships
     bookings = relationship("Booking", back_populates="user", cascade="all, delete-orphan")
-    favorites = relationship("UserFavorite", back_populates="user", cascade="all, delete-orphan")
-    reviews = relationship("Review", back_populates="user", cascade="all, delete-orphan")
     
     __table_args__ = (
         Index('ix_users_email', 'email'),

@@ -1,4 +1,3 @@
-# backend/app/middleware/logging.py
 import time
 from typing import Callable
 from fastapi import Request, Response
@@ -16,7 +15,6 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: Callable) -> Response:
         start_time = time.time()
         
-        # Clear context and bind request-specific data
         clear_contextvars()
         bind_contextvars(
             request_id=request.headers.get("X-Request-ID"),

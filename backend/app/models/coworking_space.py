@@ -1,4 +1,3 @@
-# backend/app/models/coworking_space.py
 from sqlalchemy import Column, String, Text, Boolean
 from sqlalchemy.orm import relationship
 

@@ -1,4 +1,3 @@
-# backend/app/core/config.py
 from typing import Optional, List
 from pydantic_settings import BaseSettings
 from pydantic import PostgresDsn, validator, AnyHttpUrl
@@ -18,32 +17,29 @@ class Settings(BaseSettings):
     PORT: int = 8000
     WORKERS: int = 4
 
-    SECRET_KEY: str
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-    REFRESH_TOKEN_EXPIRE_DAYS: int = 7
-
     BACKEND_CORS_ORIGINS: List[AnyHttpUrl] = []
 
-    POSTGRES_SERVER: str
-    POSTGRES_USER: str
-    POSTGRES_PASSWORD: str
-    POSTGRES_DB: str
+    POSTGRES_SERVER: Optional[str] = None
+    POSTGRES_USER: Optional[str] = None
+    POSTGRES_PASSWORD: Optional[str] = None
+    POSTGRES_DB: Optional[str] = None
     POSTGRES_PORT: str = "5432"
-    DATABASE_URL: Optional[PostgresDsn] = None
+    DATABASE_URL: Optional[str] = None
     
     @validator("DATABASE_URL", pre=True)
     def assemble_db_connection(cls, v: Optional[str], values: dict) -> str:
         if isinstance(v, str):
             return v
-        return PostgresDsn.build(
+        if values.get("ENVIRONMENT") == "local":
+            return "sqlite:///./coworking.db"
+        return str(PostgresDsn.build(
             scheme="postgresql",
             username=values.get("POSTGRES_USER"),
             password=values.get("POSTGRES_PASSWORD"),
             host=values.get("POSTGRES_SERVER"),
             port=int(values.get("POSTGRES_PORT")),
             path=f"{values.get('POSTGRES_DB') or ''}",
-        )
+        ))
     
     REDIS_HOST: str = "localhost"
     REDIS_PORT: int = 6379
@@ -56,21 +52,6 @@ class Settings(BaseSettings):
             return v
         return f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/{values.get('REDIS_DB')}"
 
-    CELERY_BROKER_URL: Optional[str] = None
-    CELERY_RESULT_BACKEND: Optional[str] = None
-    
-    @validator("CELERY_BROKER_URL", pre=True)
-    def assemble_celery_broker(cls, v: Optional[str], values: dict) -> str:
-        if isinstance(v, str):
-            return v
-        return f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/1"
-    
-    @validator("CELERY_RESULT_BACKEND", pre=True)
-    def assemble_celery_backend(cls, v: Optional[str], values: dict) -> str:
-        if isinstance(v, str):
-            return v
-        return f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/2"
-    
     RATE_LIMIT_ENABLED: bool = True
     RATE_LIMIT_DEFAULT: str = "100/hour"
 

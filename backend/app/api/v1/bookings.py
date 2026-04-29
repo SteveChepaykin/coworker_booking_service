@@ -71,12 +71,10 @@ def create_booking(
     """
     Create a new booking.
     """
-    # Check if room exists and is active
     room = db.query(Room).filter(Room.id == booking.room_id, Room.is_active == True).first()
     if not room:
         raise HTTPException(status_code=404, detail="Active room not found")
 
-    # Check for overlapping bookings
     overlapping_booking = db.query(Booking).filter(
         Booking.room_id == booking.room_id,
         Booking.end_time > booking.start_time,

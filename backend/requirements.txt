@@ -9,5 +9,3 @@ python-dotenv==1.0.0
 structlog==24.1.0
 
 cors==1.0.1
-databases==0.8.0 # consider removing if not actively using
-asyncpg==0.29.0 # consider removing if not actively using

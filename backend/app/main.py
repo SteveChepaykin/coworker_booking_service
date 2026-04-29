@@ -1,12 +1,18 @@
-# backend/app/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
+import socket
 
 from .core.config import settings
 from .core.database import engine
 from .core.logging import setup_logging, get_logger
 from .middleware.logging import LoggingMiddleware
+
+from .models.user import User
+from .models.coworking_space import CoworkingSpace
+from .models.room import Room
+from .models.booking import Booking
+
 from .api.v1.api import api_router
 
 setup_logging()
@@ -88,4 +94,5 @@ async def health_check():
         "status": "healthy" if db_status == "healthy" else "degraded",
         "database": db_status,
         "version": settings.APP_VERSION,
+        "hostname": socket.gethostname(),
     }
