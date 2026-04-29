@@ -41,12 +41,10 @@ services:
     restart: always
 
   backend:
-    build:
-      context: ../backend
-      dockerfile: Dockerfile
-    container_name: coworking_backend
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/coworker-rooms-app-backend:${IMAGE_TAG:-latest}
     environment:
-      - ENVIRONMENT=development
+      - ENVIRONMENT=production
+      - APP_VERSION=${IMAGE_TAG:-1.0.0}
       - SECRET_KEY=${SECRET_KEY}
       - POSTGRES_SERVER=postgres
       - POSTGRES_USER=${POSTGRES_USER}
@@ -54,8 +52,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - REDIS_HOST=redis
       - BACKEND_CORS_ORIGINS=["http://localhost:3000","http://localhost:8000"]
-    ports:
-      - "8000:8000"
     volumes:
       - ../backend:/app
       - /app/__pycache__
@@ -69,16 +65,27 @@ services:
     command: /app/scripts/start.sh
     restart: always
 
+  loadbalancer:
+    image: nginx:1.25-alpine
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - backend
+    networks:
+      - coworking_network
+    restart: always
+
   frontend:
-    build:
-      context: ../frontend/
-    container_name: coworking_frontend
+    image: ghcr.io/${GITHUB_REPOSITORY_OWNER}/coworker-rooms-app-frontend:${IMAGE_TAG:-latest}
     ports:
       - "3000:80"
     depends_on:
       - backend
     volumes:
       - ../frontend:/usr/share/nginx/html:ro
+      - ../frontend/default.conf:/etc/nginx/conf.d/default.conf:ro
     networks:
       - coworking_network
     restart: always
