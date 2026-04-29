@@ -9,7 +9,7 @@ on:
 env:
   REGISTRY: ghcr.io
   # github.repository format is <account>/<repo>
-  IMAGE_NAME: ${{ github.repository | lower }}
+  IMAGE_NAME: ${{ github.repository | lowercase }}
 
 jobs:
   build-and-push:
