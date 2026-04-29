@@ -4,8 +4,8 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ...core.database import get_db
-from ...models.coworking_space import CoworkingSpace
 from ...schemas.space import SpaceOut
+from ... import crud
 
 router = APIRouter()
 
@@ -18,5 +18,5 @@ def read_spaces(
     """
     Retrieve all active coworking spaces with pagination.
     """
-    spaces = db.query(CoworkingSpace).filter(CoworkingSpace.is_active == True).offset(skip).limit(limit).all()
+    spaces = crud.space.get_multi_active(db, skip=skip, limit=limit)
     return spaces
