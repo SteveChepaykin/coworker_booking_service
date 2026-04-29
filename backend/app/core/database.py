@@ -36,12 +36,22 @@ class Base(declarative_base()):
     __abstract__ = True
     query_class = SoftDeleteQuery
 
+connect_args = {}
+engine_kwargs = {
+    "pool_pre_ping": True,
+    "echo": settings.DEBUG,
+}
+
+if settings.DATABASE_URL and settings.DATABASE_URL.startswith("sqlite"):
+    connect_args["check_same_thread"] = False
+else:
+    engine_kwargs["pool_size"] = 20
+    engine_kwargs["max_overflow"] = 0
+
 engine = create_engine(
     str(settings.DATABASE_URL),
-    pool_pre_ping=True,
-    pool_size=20,
-    max_overflow=0,
-    echo=settings.DEBUG,
+    connect_args=connect_args,
+    **engine_kwargs
 )
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine, query_cls=SoftDeleteQuery)
 

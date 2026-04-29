@@ -1,4 +1,8 @@
-CREATE TABLE coworking_spaces (
+-- Enable uuid-ossp extension for gen_random_uuid() and uuid_ops operator class
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE coworking_spaces ( 
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     name VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
@@ -24,6 +28,8 @@ CREATE TABLE coworking_spaces (
     amenities JSONB DEFAULT '[]'::jsonb, -- ["wifi", "coffee", "parking", etc.]
     images JSONB DEFAULT '[]'::jsonb,
     is_active BOOLEAN DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
@@ -48,6 +54,8 @@ CREATE TABLE rooms (
     -- Room-specific settings
     hourly_rate DECIMAL(10,2), -- Optional, if rooms have different pricing
     is_active BOOLEAN DEFAULT true,
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
@@ -69,6 +77,8 @@ CREATE TABLE users (
     phone VARCHAR(50),
     preferred_timezone VARCHAR(50) DEFAULT 'UTC',
     
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
     last_login TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
@@ -94,13 +104,15 @@ CREATE TABLE bookings (
     CHECK (EXTRACT(MINUTE FROM start_time) % 15 = 0), -- 15-min increments
     CHECK (EXTRACT(MINUTE FROM end_time) % 15 = 0),
     
+    is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
+    deleted_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
     
-    CONSTRAINT no_overlapping_bookings EXCLUDE USING gist (
+    CONSTRAINT exclude_overlapping_bookings EXCLUDE USING gist ( 
         room_id WITH =,
         tstzrange(start_time, end_time) WITH &&
-    ) WHERE (status = 'confirmed')
+    ) WHERE (status = 'confirmed' AND is_deleted = false)
 );
 
 CREATE INDEX idx_bookings_time_range ON bookings USING gist (room_id, tstzrange(start_time, end_time));

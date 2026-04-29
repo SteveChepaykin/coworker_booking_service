@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
-    const API_BASE_URL = 'http://localhost:8000/api/v1';
+    const API_BASE_URL = '/api/v1';
     const CURRENT_USER_ID = '22222222-2222-2222-2222-222222222222'; // Hardcoded for now
 
     // --- DOM ELEMENT REFERENCES ---
@@ -95,7 +95,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 li.dataset.spaceId = space.id;
                 li.dataset.spaceName = space.name;
                 li.querySelector('.item-name').textContent = space.name;
-                li.querySelector('.item-detail').textContent = space.city;
+                li.querySelector('.item-detail').textContent = `${space.address}, ${space.city}`;
                 if (space.id === state.selectedSpaceId) {
                     li.classList.add('selected');
                 }

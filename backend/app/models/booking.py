@@ -1,6 +1,6 @@
 from sqlalchemy import Column, String, DateTime, Text, Integer, ForeignKey, CheckConstraint, Index
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import UUID, EXCLUDE
+from sqlalchemy.dialects.postgresql import UUID, ExcludeConstraint
 from sqlalchemy.sql import expression
 
 from .base import BaseModel
@@ -33,9 +33,9 @@ class Booking(BaseModel):
         Index('ix_bookings_time_range', 'room_id', 'start_time', 'end_time'),
         Index('ix_bookings_is_deleted', 'is_deleted'),
         Index('ix_bookings_user_active', 'user_id', 'is_deleted', 'status'),
-        EXCLUDE(
+        ExcludeConstraint(
             ('room_id', '='),
-            (expression.text('tsrange(start_time, end_time)'), '&&'),
+            (expression.text('tstzrange(start_time, end_time)'), '&&'),
             where=expression.text("status = 'confirmed' AND is_deleted = false"),
             name='exclude_overlapping_bookings'
         ),

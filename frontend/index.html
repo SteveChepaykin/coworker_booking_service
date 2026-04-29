@@ -3,65 +3,60 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coworking Room Booker</title>
+    <title>Coworking Rooms Booking</title>
     <link rel="stylesheet" href="style.css">
-    <script src="app.js" defer></script>
 </head>
 <body>
+    <header>
+        <h1>Coworking Rooms Booking</h1>
+    </header>
+    
+    <main class="container">
+        <!-- Left Sidebar: Spaces List -->
+        <aside id="spaces-section">
+            <h2>Coworking Spaces</h2>
+            <div id="spaces-loader" class="hidden">Loading spaces...</div>
+            <div id="spaces-error" class="error hidden"></div>
+            <ul id="spaces-list" class="list"></ul>
+        </aside>
 
-    <div class="container">
-        <header>
-            <h1>Coworking Room Booker</h1>
-        </header>
-
-        <main class="content-wrapper">
-            <div class="list-section">
-                <section id="spaces-section">
-                    <h2>1. Select a Coworking Space</h2>
-                    <div id="spaces-loader" class="loader"></div>
-                    <p id="spaces-error" class="error-message hidden"></p>
-                    <ul id="spaces-list" class="item-list"></ul>
-                </section>
-
-                <section id="rooms-section" class="hidden">
-                    <h2>2. Select a Room in <span id="selected-space-name"></span></h2>
-                    <div id="rooms-loader" class="loader hidden"></div>
-                    <p id="rooms-error" class="error-message hidden"></p>
-                    <ul id="rooms-list" class="item-list"></ul>
-                </section>
+        <!-- Right Main Content: Rooms & My Bookings -->
+        <section id="main-content">
+            <div id="rooms-section" class="hidden">
+                <h2>Rooms in <span id="selected-space-name"></span></h2>
+                <div id="rooms-loader" class="hidden">Loading rooms...</div>
+                <div id="rooms-error" class="error hidden"></div>
+                <ul id="rooms-list" class="list grid-list"></ul>
             </div>
 
-            <div class="bookings-section">
-                <section id="my-bookings-section">
-                    <h2>My Upcoming Bookings</h2>
-                    <div id="bookings-loader" class="loader"></div>
-                    <p id="bookings-error" class.="error-message hidden"></p>
-                    <ul id="my-bookings-list" class="item-list"></ul>
-                </section>
+            <div id="bookings-section">
+                <h2>My Upcoming Bookings</h2>
+                <div id="bookings-loader" class="hidden">Loading bookings...</div>
+                <div id="bookings-error" class="error hidden"></div>
+                <ul id="my-bookings-list" class="list"></ul>
             </div>
-        </main>
-    </div>
+        </section>
+    </main>
 
     <!-- Booking Modal -->
-    <div id="booking-modal" class="modal hidden">
+    <div id="booking-modal" class="hidden">
         <div class="modal-overlay"></div>
-        <div class="modal-content" role="dialog" aria-labelledby="modal-title" aria-modal="true">
-            <button class="close-button" aria-label="Close modal">&times;</button>
-            <h2 id="modal-title">Book Room: <span id="modal-room-name"></span></h2>
-            <div id="modal-loader" class="loader hidden"></div>
-            <p id="modal-error" class="error-message hidden"></p>
-            <form id="booking-form" novalidate>
+        <div class="modal-content">
+            <span class="close-button">&times;</span>
+            <h2>Book Room: <span id="modal-room-name"></span></h2>
+            <div id="modal-error" class="error hidden"></div>
+            <form id="booking-form">
                 <input type="hidden" id="modal-room-id" name="roomId">
                 <div class="form-group">
-                    <label for="start-time">Start Time:</label>
-                    <input type="datetime-local" id="start-time" name="startTime" required>
+                    <label for="startTime">Start Time:</label>
+                    <input type="datetime-local" id="startTime" name="startTime" required>
                 </div>
                 <div class="form-group">
-                    <label for="end-time">End Time:</label>
-                    <input type="datetime-local" id="end-time" name="endTime" required>
+                    <label for="endTime">End Time:</label>
+                    <input type="datetime-local" id="endTime" name="endTime" required>
                 </div>
                 <div class="form-group">
-                    <label for="purpose">Purpose:</label>
+                    <label for="purpose">Purpose (Optional):</label>
                     <input type="text" id="purpose" name="purpose" placeholder="e.g., Team Meeting">
                 </div>
                 <button type="submit" id="confirm-booking-btn">Confirm Booking</button>
@@ -69,23 +64,23 @@
         </div>
     </div>
 
-    <!-- HTML Templates -->
+    <!-- HTML Templates used by app.js -->
     <template id="space-item-template">
-        <li class="item" tabindex="0">
-            <span class="item-name"></span>
-            <span class="item-detail"></span>
+        <li class="item card">
+            <h3 class="item-name"></h3>
+            <p class="item-detail text-muted"></p>
         </li>
     </template>
-
     <template id="room-item-template">
-        <li class="item bookable" tabindex="0">
-            <span class="item-name"></span>
-            <span class="item-detail"></span>
+        <li class="bookable card">
+            <h3 class="item-name"></h3>
+            <p class="item-detail text-muted"></p>
         </li>
     </template>
-
     <template id="booking-item-template">
-        <li class="booking-item"></li>
+        <li class="card booking-card"></li>
     </template>
+
+    <script src="app.js"></script>
 </body>
 </html>
