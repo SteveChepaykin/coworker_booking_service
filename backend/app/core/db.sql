@@ -27,6 +27,7 @@ CREATE TABLE coworking_spaces (
 
     amenities JSONB DEFAULT '[]'::jsonb, -- ["wifi", "coffee", "parking", etc.]
     images JSONB DEFAULT '[]'::jsonb,
+    image_link VARCHAR(255),
     is_active BOOLEAN DEFAULT true,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE,
@@ -53,6 +54,7 @@ CREATE TABLE rooms (
     
     -- Room-specific settings
     hourly_rate DECIMAL(10,2), -- Optional, if rooms have different pricing
+    image_link VARCHAR(255),
     is_active BOOLEAN DEFAULT true,
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
     deleted_at TIMESTAMP WITH TIME ZONE,
@@ -198,12 +200,12 @@ CREATE TRIGGER update_bookings_updated_at
 -- Note: Using fixed UUIDs for predictability in testing/development
 
 -- Create a Coworking Space
-INSERT INTO coworking_spaces (id, name, slug, address, city, country, is_active)
+INSERT INTO coworking_spaces (id, name, slug, address, city, country, is_active, image_link)
 VALUES 
-('11111111-1111-1111-1111-111111111111', 'Innovate Hub', 'innovate-hub-metropolis', '123 Tech Street', 'Metropolis', 'USA', true),
-('11111111-2222-1111-1111-111111111111', 'Innovate Hub', 'innovate-hub-indianapolis', '123 Tech Street', 'Indianapolis', 'USA', true),
-('11111111-1111-2222-1111-111111111111', 'Innovate Hub', 'innovate-hub-la', '111 Tech Street', 'Los-Angeles', 'USA', true),
-('11111111-1111-1111-2222-111111111111', 'Skolkovo', 'skolkovo', '222 Tech Street', 'Moscow', 'Russia', true);
+('11111111-1111-1111-1111-111111111111', 'Innovate Hub', 'innovate-hub-metropolis', '123 Tech Street', 'Metropolis', 'USA', true, 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?w=800&q=80'),
+('11111111-2222-1111-1111-111111111111', 'Creator Space', 'creator-space-indy', '456 Art Ave', 'Indianapolis', 'USA', true, 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=800&q=80'),
+('11111111-1111-2222-1111-111111111111', 'The Foundry', 'the-foundry-la', '789 Maker Blvd', 'Los Angeles', 'USA', true, 'https://images.unsplash.com/photo-1582653291997-079a1c04e5d1?w=800&q=80'),
+('11111111-1111-1111-2222-111111111111', 'Skolkovo Tech', 'skolkovo', '222 Tech Street', 'Moscow', 'Russia', true, 'https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=800&q=80');
 
 -- Create a User
 -- Password is 'password' (hashed with a placeholder, real app should use bcrypt)
@@ -211,18 +213,18 @@ INSERT INTO users (id, email, username, full_name, hashed_password, is_active)
 VALUES ('22222222-2222-2222-2222-222222222222', 'test.user@example.com', 'testuser', 'Test User', '$2b$12$placeholderhashfortesting123', true);
 
 -- Create a Room within the Coworking Space
-INSERT INTO rooms (id, coworking_space_id, name, capacity, is_active)
+INSERT INTO rooms (id, coworking_space_id, name, capacity, is_active, image_link)
 VALUES 
-('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'The Think Tank', 10, true),
-('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'The Tank', 10, true),
-('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'The Think', 10, true),
-('66666666-6666-6666-6666-666666666666', '11111111-2222-1111-1111-111111111111', 'The Thinking Tank', 10, true),
-('77777777-7777-7777-7777-777777777777', '11111111-2222-1111-1111-111111111111', 'The Idea Bubble', 10, true),
-('88888888-8888-8888-8888-888888888888', '11111111-2222-1111-1111-111111111111', 'The Idea', 10, true),
-('99999999-9999-9999-9999-999999999999', '11111111-1111-2222-1111-111111111111', 'The Bubble', 10, true),
-('33333333-3333-3333-3333-444444444444', '11111111-1111-2222-1111-111111111111', 'The Thought', 10, true),
-('33333333-3333-3333-3333-555555555555', '11111111-1111-1111-2222-111111111111', 'The Great Thought', 10, true),
-('33333333-3333-3333-3333-666666666666', '11111111-1111-1111-2222-111111111111', 'The Big Thought', 10, true);
+('33333333-3333-3333-3333-333333333333', '11111111-1111-1111-1111-111111111111', 'The Think Tank', 10, true, 'https://images.unsplash.com/photo-1604328698692-f76ea9498e76?w=600&q=80'),
+('44444444-4444-4444-4444-444444444444', '11111111-1111-1111-1111-111111111111', 'Focus Pod', 4, true, 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=600&q=80'),
+('55555555-5555-5555-5555-555555555555', '11111111-1111-1111-1111-111111111111', 'Boardroom', 20, true, 'https://images.unsplash.com/photo-1505409859467-3a796fd5798e?w=600&q=80'),
+('66666666-6666-6666-6666-666666666666', '11111111-2222-1111-1111-111111111111', 'Creative Studio', 8, true, 'https://images.unsplash.com/photo-1556761175-5973dc0f32b7?w=600&q=80'),
+('77777777-7777-7777-7777-777777777777', '11111111-2222-1111-1111-111111111111', 'The Idea Bubble', 6, true, 'https://images.unsplash.com/photo-1598257006458-087169a1f08d?w=600&q=80'),
+('88888888-8888-8888-8888-888888888888', '11111111-2222-1111-1111-111111111111', 'Quiet Zone', 2, true, 'https://images.unsplash.com/photo-1497215848143-222dfd12a4c1?w=600&q=80'),
+('99999999-9999-9999-9999-999999999999', '11111111-1111-2222-1111-111111111111', 'The Bubble', 10, true, 'https://images.unsplash.com/photo-1431540015161-0bf868a2d407?w=600&q=80'),
+('33333333-3333-3333-3333-444444444444', '11111111-1111-2222-1111-111111111111', 'The Thought', 10, true, 'https://images.unsplash.com/photo-1503423571797-2d2bb372094a?w=600&q=80'),
+('33333333-3333-3333-3333-555555555555', '11111111-1111-1111-2222-111111111111', 'The Great Thought', 10, true, 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=600&q=80'),
+('33333333-3333-3333-3333-666666666666', '11111111-1111-1111-2222-111111111111', 'The Big Thought', 10, true, 'https://images.unsplash.com/photo-1517502884422-41eaead166d4?w=600&q=80');
 
 -- You can use the following UUIDs in your API calls:
 -- Coworking Space ID: 11111111-1111-1111-1111-111111111111

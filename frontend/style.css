@@ -1,185 +1,217 @@
 :root {
-    --primary-color: #2c3e50;
-    --accent-color: #3498db;
-    --background-color: #f8f9fa;
+    --primary-color: #1a1a2e;
+    --accent-color: #0f3460;
+    --success-color: #4caf50;
+    --background-color: #f4f6f9;
     --card-bg: #ffffff;
     --text-color: #333333;
     --error-color: #e74c3c;
+    --border-radius: 12px;
+    --shadow: 0 4px 15px rgba(0,0,0,0.06);
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
     background-color: var(--background-color);
     color: var(--text-color);
     margin: 0;
     padding: 0;
+    line-height: 1.6;
 }
 
 header {
     background-color: var(--primary-color);
     color: white;
-    padding: 1.5rem 2rem;
+    padding: 1rem 2rem;
     text-align: center;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-.container {
+.column-layout {
     display: flex;
-    max-width: 1200px;
+    flex-direction: column;
+    max-width: 1100px;
     margin: 2rem auto;
-    gap: 2rem;
+    gap: 3rem;
     padding: 0 1rem;
 }
 
-aside {
-    flex: 1;
-    min-width: 280px;
-}
-
-#main-content {
-    flex: 2.5;
-    display: flex;
-    flex-direction: column;
-    gap: 2.5rem;
-}
-
-.hidden {
-    display: none !important;
-}
-
-.list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
+.section-title {
+    font-size: 1.5rem;
+    border-bottom: 2px solid #e1e4e8;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1.5rem;
 }
 
 .grid-list {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1.5rem;
 }
+
+.large-grid { grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); }
+.small-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
 
 .card {
     background: var(--card-bg);
-    border-radius: 8px;
-    padding: 1.25rem;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
-    border: 1px solid #eaeaea;
+    border-radius: var(--border-radius);
+    overflow: hidden;
+    box-shadow: var(--shadow);
     cursor: pointer;
-    transition: all 0.2s ease-in-out;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    flex-direction: column;
 }
 
 .card:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 6px 12px rgba(0,0,0,0.1);
-    border-color: var(--accent-color);
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.1);
 }
 
-.card.selected {
-    border: 2px solid var(--accent-color);
-    background-color: #f0f7fb;
+.card-img {
+    width: 100%;
+    height: 160px;
+    object-fit: cover;
+    background-color: #ddd;
+}
+
+.card-content {
+    padding: 1.2rem;
 }
 
 .item-name {
-    margin: 0 0 0.5rem 0;
-    font-size: 1.1rem;
-    color: var(--primary-color);
+    margin: 0;
+    font-size: 1.2rem;
+    font-weight: 600;
 }
 
 .text-muted {
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-top: 0.4rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    background: white;
+    border-radius: var(--border-radius);
     color: #666;
-    margin: 0;
-    font-size: 0.9rem;
+    font-style: italic;
 }
 
-.error {
-    color: var(--error-color);
-    background-color: #fdeaea;
-    padding: 0.75rem;
-    border-radius: 4px;
-    margin-bottom: 1rem;
-    font-size: 0.9rem;
-}
+.hidden { display: none !important; }
 
-/* Modal Styles */
-#booking-modal {
+/* --- Modal & Interactive Timeline --- */
+#booking-modal, #booking-details-modal {
     position: fixed;
     top: 0; left: 0; right: 0; bottom: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 9999;
 }
 
 .modal-overlay {
     position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.6);
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(3px);
 }
 
 .modal-content {
     background: white;
-    padding: 2.5rem;
-    border-radius: 10px;
+    padding: 2rem 2.5rem;
+    border-radius: var(--border-radius);
     position: relative;
-    z-index: 1001;
+    z-index: 10000;
     width: 90%;
-    max-width: 450px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
 }
 
 .close-button {
     position: absolute;
-    top: 15px; right: 20px;
+    top: 15px; right: 15px;
     font-size: 1.8rem;
     cursor: pointer;
-    color: #888;
+    background: none; border: none; color: #888;
 }
 
-.close-button:hover {
-    color: var(--text-color);
+.btn-text {
+    background: none; border: none; color: var(--accent-color);
+    cursor: pointer; font-weight: 600; padding: 0; margin-bottom: 1rem;
 }
 
-.form-group {
-    margin-bottom: 1.25rem;
+.timeline-container {
+    width: 100%; padding: 2rem 0;
 }
 
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 500;
+.timeline-track {
+    position: relative; width: 100%; height: 24px;
+    background: #e2e8f0; border-radius: 12px; cursor: pointer;
 }
 
-.form-group input {
+.timeline-selected {
+    position: absolute; height: 100%; background: var(--accent-color);
+    border-radius: 12px; pointer-events: none;
+    transition: background 0.2s;
+}
+
+.timeline-selected.invalid { background: var(--error-color); }
+
+.timeline-booked-block {
+    position: absolute; height: 100%; background: #95a5a6;
+    background-image: repeating-linear-gradient(45deg, transparent, transparent 5px, rgba(255,255,255,.3) 5px, rgba(255,255,255,.3) 10px);
+    pointer-events: none;
+}
+
+.timeline-handle {
+    position: absolute; top: -8px; width: 24px; height: 40px;
+    background: white; border: 3px solid var(--accent-color);
+    border-radius: 6px; cursor: ew-resize; transform: translateX(-50%);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2); z-index: 10;
+}
+
+.timeline-handle .tooltip {
+    position: absolute; top: -30px; left: 50%; transform: translateX(-50%);
+    background: var(--primary-color); color: white; padding: 2px 6px;
+    border-radius: 4px; font-size: 0.8rem; pointer-events: none;
+    white-space: nowrap;
+}
+
+.form-group { margin-bottom: 1.5rem; }
+.form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; }
+input[type="date"], input[type="text"] {
     width: 100%;
-    padding: 0.75rem;
+    padding: 0.8rem;
     border: 1px solid #ccc;
-    border-radius: 6px;
-    box-sizing: border-box;
-    font-family: inherit;
+    border-radius: 8px;
+    font-family: inherit; font-size: 1rem; box-sizing: border-box;
 }
 
-button[type="submit"] {
-    background-color: var(--accent-color);
-    color: white;
-    border: none;
-    padding: 0.85rem 1.5rem;
-    border-radius: 6px;
-    cursor: pointer;
-    width: 100%;
-    font-size: 1.05rem;
-    font-weight: bold;
-    margin-top: 1rem;
-    transition: background-color 0.2s;
+.btn-primary {
+    background-color: var(--accent-color); color: white;
+    border: none; padding: 1rem 2rem; border-radius: 8px;
+    cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: bold;
+    transition: background 0.2s;
 }
+.btn-primary:hover { background-color: var(--primary-color); }
+.btn-primary:disabled { background-color: #95a5a6; cursor: not-allowed; }
 
-button[type="submit"]:hover {
-    background-color: #2980b9;
+.btn-danger {
+    background-color: var(--error-color); color: white;
+    border: none; padding: 1rem 2rem; border-radius: 8px;
+    cursor: pointer; width: 100%; font-size: 1.1rem; font-weight: bold;
+    transition: background 0.2s;
 }
+.btn-danger:hover { background-color: #c0392b; }
 
-button[type="submit"]:disabled {
-    background-color: #95a5a6;
-    cursor: not-allowed;
+.success-container { text-align: center; padding: 2rem 0; }
+.success-icon {
+    width: 80px; height: 80px; background: var(--success-color);
+    border-radius: 50%; margin: 0 auto 1.5rem auto;
+    display: flex; align-items: center; justify-content: center;
 }
+.success-icon svg { width: 40px; height: 40px; fill: white; }
+
+.error { background: #fdeaea; color: var(--error-color); padding: 1rem; border-radius: 8px; margin-bottom: 1rem; }
