@@ -11,5 +11,6 @@ class CoworkingSpace(BaseModel):
     address = Column(Text, nullable=False)
     city = Column(String(100))
     is_active = Column(Boolean, default=True, nullable=False)
+    image_link = Column(String(255))
 
     rooms = relationship("Room", back_populates="coworking_space", cascade="all, delete-orphan")

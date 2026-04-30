@@ -11,74 +11,112 @@
         <h1>Coworking Rooms Booking</h1>
     </header>
     
-    <main class="container">
-        <!-- Left Sidebar: Spaces List -->
-        <aside id="spaces-section">
+    <main class="container column-layout">
+        <!-- Top Section: Current Bookings -->
+        <section id="bookings-section">
+            <h2 class="section-title">My Upcoming Bookings</h2>
+            <div id="bookings-loader" class="hidden">Loading bookings...</div>
+            <div id="bookings-error" class="error hidden"></div>
+            <div id="bookings-empty" class="empty-state hidden">You have no upcoming bookings right now. Time to collaborate!</div>
+            <div id="my-bookings-list" class="grid-list small-grid"></div>
+        </section>
+
+        <!-- Bottom Section: Coworking Spaces -->
+        <section id="spaces-section">
             <h2>Coworking Spaces</h2>
             <div id="spaces-loader" class="hidden">Loading spaces...</div>
             <div id="spaces-error" class="error hidden"></div>
-            <ul id="spaces-list" class="list"></ul>
-        </aside>
-
-        <!-- Right Main Content: Rooms & My Bookings -->
-        <section id="main-content">
-            <div id="rooms-section" class="hidden">
-                <h2>Rooms in <span id="selected-space-name"></span></h2>
-                <div id="rooms-loader" class="hidden">Loading rooms...</div>
-                <div id="rooms-error" class="error hidden"></div>
-                <ul id="rooms-list" class="list grid-list"></ul>
-            </div>
-
-            <div id="bookings-section">
-                <h2>My Upcoming Bookings</h2>
-                <div id="bookings-loader" class="hidden">Loading bookings...</div>
-                <div id="bookings-error" class="error hidden"></div>
-                <ul id="my-bookings-list" class="list"></ul>
-            </div>
+            <div id="spaces-list" class="grid-list large-grid"></div>
         </section>
     </main>
 
-    <!-- Booking Modal -->
+    <!-- Multi-step Booking Modal -->
     <div id="booking-modal" class="hidden">
         <div class="modal-overlay"></div>
         <div class="modal-content">
-            <span class="close-button">&times;</span>
-            <h2>Book Room: <span id="modal-room-name"></span></h2>
-            <div id="modal-error" class="error hidden"></div>
-            <form id="booking-form">
-                <input type="hidden" id="modal-room-id" name="roomId">
-                <div class="form-group">
-                    <label for="startTime">Start Time:</label>
-                    <input type="datetime-local" id="startTime" name="startTime" required>
+            <button class="close-button" id="modal-close">&times;</button>
+            
+            <!-- Step 1: Room Selection -->
+            <div id="step-1-rooms">
+                <h2>Available Rooms in <span id="modal-space-name"></span></h2>
+                <div id="rooms-loader" class="hidden">Loading rooms...</div>
+                <div id="rooms-list" class="grid-list"></div>
+            </div>
+
+            <!-- Step 2: Date & Timeline Selection -->
+            <div id="step-2-datetime" class="hidden">
+                <button id="back-to-rooms" class="btn-text">&larr; Back to Rooms</button>
+                <h2>Book <span id="modal-room-name"></span></h2>
+                <div id="modal-error" class="error hidden"></div>
+                
+                <form id="booking-form">
+                    <input type="hidden" id="modal-room-id" name="roomId">
+                    <div class="form-group">
+                        <label>Select Date:</label>
+                        <input type="date" id="booking-date" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>Select Time Range (09:00 - 18:00):</label>
+                        <div class="timeline-container" id="timeline-container">
+                            <div class="timeline-track" id="timeline-track">
+                                <div class="timeline-selected" id="timeline-selected"></div>
+                                <div class="timeline-handle" id="handle-start">
+                                    <div class="tooltip" id="tooltip-start">09:00</div>
+                                </div>
+                                <div class="timeline-handle" id="handle-end">
+                                    <div class="tooltip" id="tooltip-end">10:00</div>
+                                </div>
+                                <div id="timeline-blocks"></div> <!-- Gray booked blocks go here -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="purpose">Purpose (Optional):</label>
+                        <input type="text" id="purpose" name="purpose" placeholder="e.g., Strategy Meeting">
+                    </div>
+                    
+                    <button type="submit" id="confirm-booking-btn" class="btn-primary">Confirm Booking</button>
+                </form>
+            </div>
+
+            <!-- Step 3: Success -->
+            <div id="step-3-success" class="hidden success-container">
+                <div class="success-icon">
+                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
                 </div>
-                <div class="form-group">
-                    <label for="endTime">End Time:</label>
-                    <input type="datetime-local" id="endTime" name="endTime" required>
-                </div>
-                <div class="form-group">
-                    <label for="purpose">Purpose (Optional):</label>
-                    <input type="text" id="purpose" name="purpose" placeholder="e.g., Team Meeting">
-                </div>
-                <button type="submit" id="confirm-booking-btn">Confirm Booking</button>
-            </form>
+                <h2>Book successful!</h2>
+                <p>Your room has been securely reserved.</p>
+                <button id="finish-booking-btn" class="btn-primary">Done</button>
+            </div>
+
         </div>
     </div>
 
-    <!-- HTML Templates used by app.js -->
-    <template id="space-item-template">
-        <li class="item card">
-            <h3 class="item-name"></h3>
-            <p class="item-detail text-muted"></p>
-        </li>
-    </template>
-    <template id="room-item-template">
-        <li class="bookable card">
-            <h3 class="item-name"></h3>
-            <p class="item-detail text-muted"></p>
-        </li>
-    </template>
+    <!-- Booking Details Modal -->
+    <div id="booking-details-modal" class="hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="close-button" id="details-close">&times;</button>
+            <img id="details-image" class="card-img" style="margin-bottom: 1.5rem; border-radius: var(--border-radius); height: 200px;" src="" alt="Room">
+            <h2 id="details-room-name"></h2>
+            <p class="text-muted" id="details-time"></p>
+            <div class="form-group" style="margin-top: 1rem;">
+                <label>Purpose:</label>
+                <p id="details-purpose"></p>
+            </div>
+            <button id="delete-booking-btn" class="btn-danger" style="margin-top: 1rem;">Cancel Booking</button>
+        </div>
+    </div>
+
     <template id="booking-item-template">
-        <li class="card booking-card"></li>
+        <div class="card booking-card">
+            <div class="card-content">
+                <h4 class="item-name booking-room-name"></h4>
+                <p class="booking-time text-muted"></p>
+            </div>
+        </div>
     </template>
 
     <script src="app.js"></script>

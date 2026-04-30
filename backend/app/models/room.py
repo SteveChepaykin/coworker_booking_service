@@ -11,6 +11,7 @@ class Room(BaseModel):
     name = Column(String(255), nullable=False)
     capacity = Column(Integer, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
+    image_link = Column(String(255))
 
     coworking_space = relationship("CoworkingSpace", back_populates="rooms")
     bookings = relationship("Booking", back_populates="room", cascade="all, delete-orphan")
