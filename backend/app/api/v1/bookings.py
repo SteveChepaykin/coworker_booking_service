@@ -1,44 +1,17 @@
 from datetime import datetime
 from typing import List, Optional
 import uuid
+import logging
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from ...core.database import get_db
-from ...models.booking import Booking
-from ...models.room import Room
+from ...schemas.booking import BookingCreate, BookingOut, BookingUpdate
+from ... import crud
 
 router = APIRouter()
-
-class BookingCreate(BaseModel):
-    """Pydantic model for booking creation."""
-    user_id: uuid.UUID
-    room_id: uuid.UUID
-    start_time: datetime
-    end_time: datetime
-    purpose: Optional[str] = None
-
-class BookingUpdate(BaseModel):
-    """Pydantic model for booking update."""
-    start_time: Optional[datetime] = None
-    end_time: Optional[datetime] = None
-    status: Optional[str] = None
-    purpose: Optional[str] = None
-
-class BookingOut(BaseModel):
-    """Pydantic model for booking output."""
-    id: uuid.UUID
-    user_id: uuid.UUID
-    room_id: uuid.UUID
-    start_time: datetime
-    end_time: datetime
-    status: str
-    purpose: Optional[str] = None
-
-    class Config:
-        from_attributes = True
+logger = logging.getLogger(__name__)
 
 
 @router.get("/", response_model=List[BookingOut])
@@ -52,15 +25,14 @@ def read_bookings(
     """
     Retrieve bookings with pagination.
     """
-    query = db.query(Booking)
-
+    logger.info(f"GET bookings (user_id={user_id}, future_only={future_only})")
     if user_id:
-        query = query.filter(Booking.user_id == user_id)
-    
-    if future_only:
-        query = query.filter(Booking.start_time > datetime.utcnow())
-
-    bookings = query.order_by(Booking.start_time.asc()).offset(skip).limit(limit).all()
+        bookings = crud.booking.get_multi_by_user(
+            db, user_id=user_id, future_only=future_only, skip=skip, limit=limit
+        )
+    else:
+        bookings = crud.booking.get_multi(db, skip=skip, limit=limit)
+    logger.info(f"GET success - {len(bookings)} bookings")
     return bookings
 
 @router.post("/", response_model=BookingOut, status_code=status.HTTP_201_CREATED)
@@ -71,25 +43,9 @@ def create_booking(
     """
     Create a new booking.
     """
-    room = db.query(Room).filter(Room.id == booking.room_id, Room.is_active == True).first()
-    if not room:
-        raise HTTPException(status_code=404, detail="Active room not found")
-
-    overlapping_booking = db.query(Booking).filter(
-        Booking.room_id == booking.room_id,
-        Booking.end_time > booking.start_time,
-        Booking.start_time < booking.end_time,
-        Booking.status == 'confirmed',
-        Booking.is_deleted == False
-    ).first()
-
-    if overlapping_booking:
-        raise HTTPException(status_code=409, detail="Booking conflict: The room is already booked for the requested time.")
-
-    db_booking = Booking(**booking.model_dump())
-    db.add(db_booking)
-    db.commit()
-    db.refresh(db_booking)
+    logger.info(f"POST booking for room: {booking.room_id} by user: {booking.user_id}")
+    db_booking = crud.booking.create_with_overlap_check(db=db, obj_in=booking)
+    logger.info(f"POST success - created booking with ID: {db_booking.id}")
     return db_booking
 
 @router.get("/{booking_id}", response_model=BookingOut)
@@ -100,8 +56,10 @@ def read_booking(
     """
     Retrieve a single booking by its ID.
     """
-    db_booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    logger.info(f"GET single booking with ID: {booking_id}")
+    db_booking = crud.booking.get(db, id=booking_id)
     if db_booking is None:
+        logger.warning(f"GET warn - {booking_id} not found")
         raise HTTPException(status_code=404, detail="Booking not found")
     return db_booking
 
@@ -114,17 +72,14 @@ def update_booking(
     """
     Update an existing booking.
     """
-    db_booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    logger.info(f"PUT update booking {booking_id}")
+    db_booking = crud.booking.get(db, id=booking_id)
     if db_booking is None:
+        logger.warning(f"PUT warn - {booking_id} not found for update")
         raise HTTPException(status_code=404, detail="Booking not found")
 
-    update_data = booking.model_dump(exclude_unset=True)
-    for key, value in update_data.items():
-        setattr(db_booking, key, value)
-    
-    db.add(db_booking)
-    db.commit()
-    db.refresh(db_booking)
+    db_booking = crud.booking.update(db=db, db_obj=db_booking, obj_in=booking)
+    logger.info(f"PUT success - updated booking {booking_id}")
     return db_booking
 
 @router.delete("/{booking_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -135,15 +90,17 @@ def delete_booking(
     """
     Soft delete a booking (sets is_deleted to True and status to 'cancelled').
     """
-    db_booking = db.query(Booking).filter(Booking.id == booking_id).first()
+    logger.info(f"DELETE soft deleting booking {booking_id}")
+    db_booking = crud.booking.get(db, id=booking_id)
     if db_booking is None:
+        logger.warning(f"DELETE warn - {booking_id} not found for deletion")
         raise HTTPException(status_code=404, detail="Booking not found")
     
     if db_booking.is_deleted:
+        logger.warning(f"DELETE warn - {booking_id} is already deleted")
         raise HTTPException(status_code=404, detail="Booking not found")
 
-    db_booking.soft_delete()
-    db_booking.status = "cancelled"
-    db.commit()
+    crud.booking.soft_remove_with_status(db=db, db_obj=db_booking)
+    logger.info(f"DELETE success - deleted booking {booking_id}")
     
     return None

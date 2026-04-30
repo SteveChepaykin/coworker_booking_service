@@ -7,6 +7,7 @@ from .core.config import settings
 from .core.database import engine
 from .core.logging import setup_logging, get_logger
 from .middleware.logging import LoggingMiddleware
+from .middleware.rate_limit import RateLimitMiddleware
 
 from .models.user import User
 from .models.coworking_space import CoworkingSpace
@@ -60,6 +61,7 @@ if settings.BACKEND_CORS_ORIGINS:
     )
 
 app.add_middleware(LoggingMiddleware)
+app.add_middleware(RateLimitMiddleware)
 
 app.include_router(api_router, prefix="/api/v1")
 

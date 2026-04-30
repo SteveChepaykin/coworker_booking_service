@@ -1,43 +1,31 @@
+import uuid
 import time
-from typing import Callable
-from fastapi import Request, Response
+import logging
+from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
-from structlog.contextvars import bind_contextvars, clear_contextvars
-from ..core.logging import get_logger
 
-logger = get_logger(__name__)
+from ..core.logging import request_id_var
+
+logger = logging.getLogger(__name__)
 
 class LoggingMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware for logging requests and responses.
-    """
-    
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+    """Middleware to generate Request IDs and log request/response lifecycles."""
+    async def dispatch(self, request: Request, call_next):
+        req_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
+        request_id_var.set(req_id)
         start_time = time.time()
         
-        clear_contextvars()
-        bind_contextvars(
-            request_id=request.headers.get("X-Request-ID"),
-            method=request.method,
-            path=str(request.url.path),
-            client_ip=request.client.host
-        )
-        
-        logger.info("Request started")
+        logger.info(f"Incoming request: {request.method} {request.url.path}")
         
         try:
             response = await call_next(request)
-            
             process_time = time.time() - start_time
-            response.headers["X-Process-Time"] = str(process_time)
+            response.headers["X-Request-ID"] = req_id
             
-            bind_contextvars(status_code=response.status_code)
-            logger.info(
-                "Request completed",
-                process_time=round(process_time, 4),
-            )
+            logger.info(f"Request completed: {request.method} {request.url.path} - Status: {response.status_code} - Duration: {process_time:.4f}s")
+            
             return response
-            
-        except Exception:
-            logger.error("Request failed", exc_info=True)
+        except Exception as e:
+            process_time = time.time() - start_time
+            logger.error(f"Request failed: {request.method} {request.url.path} - Duration: {process_time:.4f}s - Error: {str(e)}")
             raise

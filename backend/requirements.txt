@@ -5,6 +5,7 @@ psycopg2-binary==2.9.9
 pydantic==2.5.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
+redis_py==7.4.0
 
 structlog==24.1.0
 
