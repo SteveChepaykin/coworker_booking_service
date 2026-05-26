@@ -50,3 +50,30 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ github.sha }}
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    # Only run the deploy job when code is pushed to the main branch
+    if: github.event_name != 'pull_request'
+
+    steps:
+      - name: Set lowercase image name
+        run: echo "IMAGE_NAME=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+
+      - name: Deploy Information
+        run: echo "In a real deployment, the SSH action below would execute the migration and deployment."
+
+      # - name: Run Migrations and Deploy
+      #   uses: appleboy/ssh-action@v1.0.0
+      #   with:
+      #     host: ${{ secrets.DEPLOY_HOST }}
+      #     username: ${{ secrets.DEPLOY_USER }}
+      #     key: ${{ secrets.DEPLOY_SSH_KEY }}
+      #     script: |
+      #       docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest
+      #       
+      #       # If this migration container fails, it exits with a non-zero status code, halting deployment.
+      #       docker run --rm --env-file /opt/coworking/.env ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-backend:latest migrate
+      #       
+      #       cd /opt/coworking && docker-compose pull && docker-compose up -d

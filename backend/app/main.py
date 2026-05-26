@@ -56,22 +56,6 @@ async def lifespan(app: FastAPI):
     logger.info(f"Environment: {settings.ENVIRONMENT}")
     logger.info(f"Database URL: {settings.DATABASE_URL}")
     
-    # --- One-time data fix for development ---
-    # This ensures the test user's password is correct, even if the database
-    # was initialized with an old seed file. This is a safe operation.
-    if settings.ENVIRONMENT == "development":
-        with SessionLocal() as db:
-            try:
-                test_user = db.query(User).filter(User.username == 'testuser').first()
-                if test_user:
-                    correct_hash = get_password_hash('password')
-                    if test_user.hashed_password != correct_hash:
-                        logger.warning("Outdated test user password hash found. Updating it now.")
-                        test_user.hashed_password = correct_hash
-                        db.commit()
-                        logger.info("Test user password hash has been corrected.")
-            except Exception as e:
-                logger.error(f"Error during startup data fix: {e}")
     
     try:
         with engine.connect() as conn:
