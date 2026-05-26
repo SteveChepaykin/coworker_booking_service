@@ -14,3 +14,4 @@ python-multipart==0.0.6
 pytest
 hypothesis==6.98.12
 httpx==0.25.1
+alembic==1.12.1
