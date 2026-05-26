@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ...core.database import get_db
 from ...schemas.room import RoomCreate, RoomOut, RoomUpdate
 from ... import crud
+from ..deps import get_current_user
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -36,7 +37,8 @@ def read_rooms(
 @router.post("/", response_model=RoomOut, status_code=status.HTTP_201_CREATED)
 def create_room(
     room: RoomCreate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
     """
     Create a new room.
@@ -65,7 +67,8 @@ def read_room(
 def update_room(
     room_id: uuid.UUID,
     room: RoomUpdate,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
     """
     Update an existing room.
@@ -83,15 +86,18 @@ def update_room(
 @router.delete("/{room_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_room(
     room_id: uuid.UUID,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: str = Depends(get_current_user)
 ):
     """
     Soft delete a room (sets is_deleted to True).
     """
     logger.info(f"DELETE soft deleting room {room_id}")
     db_room = crud.room.get(db, id=room_id)
-    if db_room is None or db_room.is_deleted:
-        logger.warning(f"DELETE warn - room {room_id} not found for deletion")
+    # The custom SoftDeleteQuery ensures that get() returns None for already deleted items.
+    # The original check `or db_room.is_deleted` would crash if db_room is None.
+    if db_room is None:
+        logger.warning(f"DELETE warn - room {room_id} not found for deletion (or already deleted)")
         raise HTTPException(status_code=404, detail="Room not found")
 
     crud.room.soft_remove(db=db, db_obj=db_room)

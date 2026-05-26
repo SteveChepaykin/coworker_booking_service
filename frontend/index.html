@@ -9,11 +9,16 @@
 <body>
     <header>
         <h1>Coworking Rooms Booking</h1>
+        <div id="auth-container">
+            <span id="user-info" class="hidden"></span>
+            <button id="login-btn" class="btn-header">Login</button>
+            <button id="logout-btn" class="btn-header hidden">Logout</button>
+        </div>
     </header>
     
     <main class="container column-layout">
         <!-- Top Section: Current Bookings -->
-        <section id="bookings-section">
+        <section id="bookings-section" class="hidden">
             <h2 class="section-title">My Upcoming Bookings</h2>
             <div id="bookings-loader" class="hidden">Loading bookings...</div>
             <div id="bookings-error" class="error hidden"></div>
@@ -31,7 +36,7 @@
     </main>
 
     <!-- Multi-step Booking Modal -->
-    <div id="booking-modal" class="hidden">
+    <div id="booking-modal" class="modal hidden">
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <button class="close-button" id="modal-close">&times;</button>
@@ -95,7 +100,7 @@
     </div>
 
     <!-- Booking Details Modal -->
-    <div id="booking-details-modal" class="hidden">
+    <div id="booking-details-modal" class="modal hidden">
         <div class="modal-overlay"></div>
         <div class="modal-content">
             <button class="close-button" id="details-close">&times;</button>
@@ -107,6 +112,59 @@
                 <p id="details-purpose"></p>
             </div>
             <button id="delete-booking-btn" class="btn-danger" style="margin-top: 1rem;">Cancel Booking</button>
+        </div>
+    </div>
+
+    <!-- Login Modal -->
+    <div id="login-modal" class="modal hidden">
+        <div class="modal-overlay"></div>
+        <div class="modal-content">
+            <button class="close-button" id="login-modal-close">&times;</button>
+
+            <!-- Login View -->
+            <div id="login-view">
+                <h2>Login</h2>
+                <p class="text-muted">Use `testuser` and `password` to log in.</p>
+                <div id="login-error" class="error hidden"></div>
+                <form id="login-form">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Login</button>
+                </form>
+                <p class="form-switch-text">Don't have an account? <button id="show-register-view" class="btn-link">Register</button></p>
+            </div>
+
+            <!-- Register View -->
+            <div id="register-view" class="hidden">
+                <h2>Create Account</h2>
+                <div id="register-error" class="error hidden"></div>
+                <form id="register-form">
+                    <div class="form-group">
+                        <label for="reg-username">Username</label>
+                        <input type="text" id="reg-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-email">Email</label>
+                        <input type="email" id="reg-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-full-name">Full Name (Optional)</label>
+                        <input type="text" id="reg-full-name" name="full_name">
+                    </div>
+                    <div class="form-group">
+                        <label for="reg-password">Password</label>
+                        <input type="password" id="reg-password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn-primary">Create Account</button>
+                </form>
+                <p class="form-switch-text">Already have an account? <button id="show-login-view" class="btn-link">Login</button></p>
+            </div>
         </div>
     </div>
 

@@ -64,19 +64,13 @@ services:
         condition: service_healthy
     networks:
       - coworking_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     command: /app/scripts/start.sh
-    restart: unless-stopped
-
-  loadbalancer:
-    image: nginx:1.25-alpine
-    ports:
-      - "8000:8000"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-    depends_on:
-      - backend
-    networks:
-      - coworking_network
     restart: unless-stopped
 
   frontend:
@@ -85,7 +79,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     volumes:
       - ../frontend:/usr/share/nginx/html:ro
       - ../frontend/default.conf:/etc/nginx/conf.d/default.conf:ro

@@ -52,8 +52,8 @@ class Settings(BaseSettings):
             return v
         return f"redis://{values.get('REDIS_HOST')}:{values.get('REDIS_PORT')}/{values.get('REDIS_DB')}"
 
-    RATE_LIMIT_ENABLED: bool = True
-    RATE_LIMIT_DEFAULT: str = "100/hour"
+    RATE_LIMIT_ENABLED: bool = False
+    RATE_LIMIT_DEFAULT: str = "100/minute"
 
     LOG_LEVEL: str = "INFO"
     LOG_FORMAT: str = "json"
@@ -63,6 +63,13 @@ class Settings(BaseSettings):
     ADVANCE_BOOKING_DAYS: int = 30
     CANCELLATION_HOURS: int = 2
     
+    SECRET_KEY: str = "your-super-secret-key-change-in-production"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 60
+    
+    CACHE_MAX_ENTRIES: int = 50
+    CACHE_TTL: int = 300
+
     class Config:
         env_file = ".env"
         case_sensitive = True
