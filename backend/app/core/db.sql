@@ -103,7 +103,7 @@ CREATE TABLE bookings (
     guest_count INT DEFAULT 1 CHECK (guest_count >= 1),
 
     CHECK (end_time > start_time),
-    CHECK (EXTRACT(MINUTE FROM start_time) % 15 = 0), -- 15-min increments
+    CHECK (EXTRACT(MINUTE FROM start_time) % 15 = 0),
     CHECK (EXTRACT(MINUTE FROM end_time) % 15 = 0),
     
     is_deleted BOOLEAN NOT NULL DEFAULT FALSE,
@@ -210,7 +210,7 @@ VALUES
 -- Create a User
 -- Password is 'password' (hashed with a placeholder, real app should use bcrypt)
 INSERT INTO users (id, email, username, full_name, hashed_password, is_active)
-VALUES ('22222222-2222-2222-2222-222222222222', 'test.user@example.com', 'testuser', 'Test User', '$2b$12$placeholderhashfortesting123', true);
+VALUES ('22222222-2222-2222-2222-222222222222', 'test.user@example.com', 'testuser', 'Test User', '$2b$12$Eixza/0x2RAz54D/Pls8sO1B9s2/QdKwhNq4b.42S4c0UeYAGlB12', true);
 
 -- Create a Room within the Coworking Space
 INSERT INTO rooms (id, coworking_space_id, name, capacity, is_active, image_link)

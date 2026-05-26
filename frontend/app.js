@@ -1,7 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
     // --- CONFIGURATION ---
     const API_BASE_URL = '/api/v1';
-    const CURRENT_USER_ID = '22222222-2222-2222-2222-222222222222'; // Hardcoded for now
 
     // --- DOM ELEMENT REFERENCES ---
     const ui = {
@@ -11,6 +10,7 @@ document.addEventListener('DOMContentLoaded', () => {
             error: document.getElementById('spaces-error'),
         },
         bookings: {
+            section: document.getElementById('bookings-section'),
             list: document.getElementById('my-bookings-list'),
             empty: document.getElementById('bookings-empty'),
             loader: document.getElementById('bookings-loader'),
@@ -54,6 +54,26 @@ document.addEventListener('DOMContentLoaded', () => {
             purpose: document.getElementById('details-purpose'),
             deleteBtn: document.getElementById('delete-booking-btn'),
         },
+        auth: {
+            container: document.getElementById('auth-container'),
+            loginBtn: document.getElementById('login-btn'),
+            logoutBtn: document.getElementById('logout-btn'),
+            userInfo: document.getElementById('user-info'),
+        },
+        loginModal: {
+            element: document.getElementById('login-modal'),
+            closeBtn: document.getElementById('login-modal-close'),
+            loginView: document.getElementById('login-view'),
+            registerView: document.getElementById('register-view'),
+            loginForm: document.getElementById('login-form'),
+            registerForm: document.getElementById('register-form'),
+            loginError: document.getElementById('login-error'),
+            registerError: document.getElementById('register-error'),
+            usernameInput: document.getElementById('username'),
+            passwordInput: document.getElementById('password'),
+            showRegisterBtn: document.getElementById('show-register-view'),
+            showLoginBtn: document.getElementById('show-login-view'),
+        },
         templates: {
             bookingItem: document.getElementById('booking-item-template'),
         }
@@ -72,7 +92,9 @@ document.addEventListener('DOMContentLoaded', () => {
         bookedRanges: [], // Times booked for selected date
         timeStart: 9,
         timeEnd: 10,
-        activeDragHandle: null
+        activeDragHandle: null,
+        authToken: localStorage.getItem('authToken') || null,
+        currentUserId: localStorage.getItem('userId') || null,
     };
 
     // --- UTILITY FUNCTIONS ---
@@ -82,9 +104,20 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- API SERVICE ---
     const api = {
         async fetch(url, options = {}) {
+            const headers = { ...options.headers };
+            if (state.authToken) {
+                headers['Authorization'] = `Bearer ${state.authToken}`;
+            }
+            
+            const finalOptions = { ...options, headers };
+
             try {
-                const response = await fetch(url, options);
+                const response = await fetch(url, finalOptions);
                 if (!response.ok) {
+                    // If auth fails (401/403), token is bad. Force logout.
+                    if (response.status === 401 || response.status === 403) {
+                        handlers.handleLogout();
+                    }
                     const errorData = await response.json().catch(() => ({ detail: response.statusText }));
                     throw new Error(errorData.detail || `Request failed with status ${response.status}`);
                 }
@@ -92,20 +125,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 return response.json();
             } catch (error) {
                 console.error(`API call to ${url} failed:`, error);
-                throw error; // Re-throw to be handled by the caller
+                throw error;
             }
         },
         getSpaces: () => api.fetch(`${API_BASE_URL}/spaces/`),
         getRooms: (spaceId) => api.fetch(`${API_BASE_URL}/rooms/?coworking_space_id=${spaceId}`),
         getRoomDetails: (roomId) => api.fetch(`${API_BASE_URL}/rooms/${roomId}`),
-        getAllBookings: () => api.fetch(`${API_BASE_URL}/bookings/`), // For timeline collision
-        getBookings: () => api.fetch(`${API_BASE_URL}/bookings/?user_id=${CURRENT_USER_ID}&future_only=true`),
+        getMyBookings: () => api.fetch(`${API_BASE_URL}/bookings/?future_only=true`),
         createBooking: (bookingData) => api.fetch(`${API_BASE_URL}/bookings/`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(bookingData),
         }),
         deleteBooking: (id) => api.fetch(`${API_BASE_URL}/bookings/${id}`, { method: 'DELETE' }),
+        login: (username, password) => {
+            const formData = new URLSearchParams();
+            formData.append('username', username);
+            formData.append('password', password);
+            return api.fetch(`${API_BASE_URL}/auth/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: formData,
+            });
+        },
+        register: (userData) => api.fetch(`${API_BASE_URL}/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(userData),
+        }),
     };
 
     // --- RENDER FUNCTIONS ---
@@ -144,14 +191,18 @@ document.addEventListener('DOMContentLoaded', () => {
             });
         },
         async bookings() {
-            ui.bookings.list.innerHTML = '';
-            if (state.bookings.length === 0) {
+            // Capture the state at the beginning of the function to prevent race conditions
+            // if the state is modified elsewhere while this function is awaiting data.
+            const bookingsToRender = [...state.bookings];
+
+            if (bookingsToRender.length === 0) {
+                ui.bookings.list.innerHTML = '';
                 show(ui.bookings.empty);
                 return;
             }
-            hide(ui.bookings.empty)
 
-            const roomPromises = state.bookings.map(booking => {
+            // 1. Fetch all required data first.
+            const roomPromises = bookingsToRender.map(booking => {
                 if (state.roomDetailsCache[booking.room_id]) return state.roomDetailsCache[booking.room_id];
                 return api.getRoomDetails(booking.room_id).then(room => {
                     state.roomDetailsCache[booking.room_id] = room;
@@ -159,21 +210,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             });
 
-            const rooms = await Promise.all(roomPromises);
-            state.bookings.forEach((booking, index) => {
-                const room = rooms[index];
-                const template = ui.templates.bookingItem.content.cloneNode(true);
+            try {
+                const rooms = await Promise.all(roomPromises);
 
-                const div = template.querySelector('.card');
-                div.dataset.id = booking.id;
-                const dStart = new Date(booking.start_time);
-                const dEnd = new Date(booking.end_time);
-                
-                template.querySelector('.booking-room-name').textContent = room ? room.name : "Room";
-                template.querySelector('.booking-time').textContent = 
-                    `${dStart.toLocaleDateString()} | ${dStart.getHours()}:${String(dStart.getMinutes()).padStart(2, '0')} - ${dEnd.getHours()}:${String(dEnd.getMinutes()).padStart(2, '0')}`;
-                ui.bookings.list.appendChild(template);
-            });
+                // 2. Now that all data is ready, clear the DOM and render the new content.
+                // This makes the update atomic and prevents flickering.
+                ui.bookings.list.innerHTML = '';
+                hide(ui.bookings.empty);
+
+                bookingsToRender.forEach((booking, index) => {
+                    const room = rooms[index];
+                    if (!room) return; // Safety check if a room detail failed to load
+
+                    const template = ui.templates.bookingItem.content.cloneNode(true);
+                    const div = template.querySelector('.card');
+                    div.dataset.id = booking.id;
+                    const dStart = new Date(booking.start_time);
+                    const dEnd = new Date(booking.end_time);
+                    
+                    template.querySelector('.booking-room-name').textContent = room.name;
+                    // Use UTC methods to display the time as it was booked, without local timezone conversion.
+                    const dateString = dStart.toLocaleDateString(undefined, { timeZone: 'UTC' });
+                    const timeString = `${String(dStart.getUTCHours()).padStart(2, '0')}:${String(dStart.getUTCMinutes()).padStart(2, '0')} - ${String(dEnd.getUTCHours()).padStart(2, '0')}:${String(dEnd.getUTCMinutes()).padStart(2, '0')}`;
+                    template.querySelector('.booking-time').textContent = `${dateString} | ${timeString}`;
+                    ui.bookings.list.appendChild(template);
+                });
+            } catch (error) {
+                // If fetching room details fails, show an error instead of an empty list.
+                ui.bookings.list.innerHTML = '';
+                ui.bookings.error.textContent = `Could not display bookings: ${error.message}`;
+                show(ui.bookings.error);
+            }
         },
     };
 
@@ -227,13 +294,16 @@ document.addEventListener('DOMContentLoaded', () => {
         },
         async loadBookedBlocks(dateStr) {
             ui.modal.timeline.blocks.innerHTML = '';
-            const allBookings = await api.getAllBookings(); // Naive fetch for demo timeline
-            state.bookedRanges = allBookings
-                .filter(b => b.room_id === state.activeRoom && b.status === 'confirmed' && b.start_time.startsWith(dateStr))
+            // Efficiently fetch bookings only for the selected room and date
+            const bookingsForRoom = await api.fetch(`${API_BASE_URL}/bookings/?room_id=${state.activeRoom}&on_date=${dateStr}`);
+            state.bookedRanges = bookingsForRoom
                 .map(b => {
                     const ds = new Date(b.start_time);
                     const de = new Date(b.end_time);
-                    return { start: ds.getHours() + (ds.getMinutes() / 60), end: de.getHours() + (de.getMinutes() / 60) };
+                    // This is the critical fix. We must use getUTCHours/Minutes because all
+                    // dates from the backend are in UTC. Using getHours() would convert
+                    // the time to the user's local timezone, causing a mismatch.
+                    return { start: ds.getUTCHours() + (ds.getUTCMinutes() / 60), end: de.getUTCHours() + (de.getUTCMinutes() / 60) };
                 });
             
             state.bookedRanges.forEach(b => {
@@ -248,6 +318,27 @@ document.addEventListener('DOMContentLoaded', () => {
             timeline.updateUI();
         }
     };
+
+    // --- AUTH LOGIC ---
+    function updateAuthState() {
+        if (state.authToken && state.currentUserId) {
+            // Logged in state
+            hide(ui.auth.loginBtn);
+            show(ui.auth.logoutBtn);
+            ui.auth.userInfo.textContent = `User: ${state.currentUserId.substring(0, 8)}...`;
+            show(ui.auth.userInfo);
+            show(ui.bookings.section);
+            load.bookings();
+        } else {
+            // Logged out state
+            show(ui.auth.loginBtn);
+            hide(ui.auth.logoutBtn);
+            hide(ui.auth.userInfo);
+            hide(ui.bookings.section);
+            ui.bookings.list.innerHTML = '';
+            hide(ui.bookings.empty);
+        }
+    }
 
     // --- EVENT HANDLERS ---
     const handlers = {
@@ -265,6 +356,13 @@ document.addEventListener('DOMContentLoaded', () => {
         handleRoomClick(event) {
             const target = event.target.closest('.room-card');
             if (!target) return;
+
+            // If user is not logged in, show login modal instead of booking form.
+            if (!state.authToken) {
+                handlers.showLoginModal();
+                return;
+            }
+
             state.activeRoom = target.dataset.id;
             ui.modal.roomName.textContent = target.dataset.name;
             
@@ -277,7 +375,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         closeModal() {
             hide(ui.modal.element);
-            load.bookings();
         },
 
         handleBookingClick(event) {
@@ -295,7 +392,10 @@ document.addEventListener('DOMContentLoaded', () => {
             
             const dStart = new Date(booking.start_time);
             const dEnd = new Date(booking.end_time);
-            ui.detailsModal.time.textContent = `${dStart.toLocaleDateString()} | ${dStart.getHours()}:${String(dStart.getMinutes()).padStart(2, '0')} - ${dEnd.getHours()}:${String(dEnd.getMinutes()).padStart(2, '0')}`;
+            // Use UTC methods to display the time as it was booked, without local timezone conversion.
+            const dateString = dStart.toLocaleDateString(undefined, { timeZone: 'UTC' });
+            const timeString = `${String(dStart.getUTCHours()).padStart(2, '0')}:${String(dStart.getUTCMinutes()).padStart(2, '0')} - ${String(dEnd.getUTCHours()).padStart(2, '0')}:${String(dEnd.getUTCMinutes()).padStart(2, '0')}`;
+            ui.detailsModal.time.textContent = `${dateString} | ${timeString}`;
             
             ui.detailsModal.purpose.textContent = booking.purpose || 'No purpose specified.';
             
@@ -337,7 +437,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const bookingData = {
                 room_id: state.activeRoom,
-                user_id: CURRENT_USER_ID,
                 start_time: dStart.toISOString(),
                 end_time: dEnd.toISOString(),
                 purpose: document.getElementById('purpose').value,
@@ -345,11 +444,98 @@ document.addEventListener('DOMContentLoaded', () => {
 
             try {
                 await api.createBooking(bookingData);
+                // Refresh both the main booking list AND the timeline view for UI consistency.
+                await Promise.all([
+                    load.bookings(),
+                    timeline.loadBookedBlocks(dateBase)
+                ]);
                 hide(ui.modal.step2); show(ui.modal.step3);
             } catch (error) {
                 ui.modal.error.textContent = `Error: ${error.message}`;
                 show(ui.modal.error);
             }
+        },
+        
+        showLoginModal() {
+            hide(ui.loginModal.loginError);
+            hide(ui.loginModal.registerError);
+            hide(ui.loginModal.registerView);
+            show(ui.loginModal.loginView);
+            ui.loginModal.usernameInput.value = 'testuser'; // Pre-fill with test user
+            ui.loginModal.passwordInput.value = 'password';
+            show(ui.loginModal.element);
+        },
+
+        closeLoginModal() {
+            hide(ui.loginModal.element);
+        },
+
+        async handleLoginSubmit(event) {
+            event.preventDefault();
+            hide(ui.loginModal.loginError);
+            const username = ui.loginModal.usernameInput.value.trim();
+            const password = ui.loginModal.passwordInput.value;
+            if (!username || !password) return;
+
+            try {
+                const data = await api.login(username, password);
+                if (data.access_token) {
+                    state.authToken = data.access_token;
+                    
+                    // Decode token to get user ID from the 'sub' claim
+                    const payload = JSON.parse(atob(data.access_token.split('.')[1]));
+                    state.currentUserId = payload.sub;
+
+                    localStorage.setItem('authToken', state.authToken);
+                    localStorage.setItem('userId', state.currentUserId);
+                    
+                    handlers.closeLoginModal();
+                    updateAuthState();
+                }
+            } catch (error) {
+                ui.loginModal.loginError.textContent = `Login failed: ${error.message}`;
+                show(ui.loginModal.loginError);
+            }
+        },
+
+        async handleRegisterSubmit(event) {
+            event.preventDefault();
+            hide(ui.loginModal.registerError);
+        
+            const form = event.target;
+            const userData = {
+                username: form.elements['username'].value.trim(),
+                email: form.elements['email'].value.trim(),
+                full_name: form.elements['full_name'].value.trim() || null,
+                password: form.elements['password'].value,
+            };
+        
+            if (!userData.username || !userData.email || !userData.password) {
+                ui.loginModal.registerError.textContent = 'Username, email, and password are required.';
+                show(ui.loginModal.registerError);
+                return;
+            }
+        
+            try {
+                await api.register(userData);
+                alert('Registration successful! Please log in.');
+                hide(ui.loginModal.registerView);
+                show(ui.loginModal.loginView);
+                ui.loginModal.usernameInput.value = userData.username;
+                ui.loginModal.passwordInput.value = '';
+                ui.loginModal.passwordInput.focus();
+            } catch (error) {
+                ui.loginModal.registerError.textContent = `Registration failed: ${error.message}`;
+                show(ui.loginModal.registerError);
+            }
+        },
+
+        handleLogout() {
+            state.authToken = null;
+            state.currentUserId = null;
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userId');
+            updateAuthState();
         },
     };
 
@@ -371,8 +557,9 @@ document.addEventListener('DOMContentLoaded', () => {
         async bookings() {
             show(ui.bookings.loader);
             hide(ui.bookings.error);
+            hide(ui.bookings.empty);
             try {
-                state.bookings = await api.getBookings();
+                state.bookings = await api.getMyBookings();
                 await render.bookings();
             } catch (error) {
                 ui.bookings.error.textContent = `Could not load bookings: ${error.message}`;
@@ -388,7 +575,8 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.spaces.list.addEventListener('click', handlers.handleSpaceClick);
         ui.modal.roomsList.addEventListener('click', handlers.handleRoomClick);
         ui.modal.closeButton.addEventListener('click', handlers.closeModal);
-        ui.modal.overlay.addEventListener('click', handlers.closeModal);
+        // Close booking modal by clicking overlay
+        ui.modal.element.querySelector('.modal-overlay').addEventListener('click', handlers.closeModal);
         ui.modal.finishBtn.addEventListener('click', handlers.closeModal);
         ui.modal.backBtn.addEventListener('click', () => { hide(ui.modal.step2); show(ui.modal.step1); });
         ui.modal.form.addEventListener('submit', handlers.handleBookingSubmit);
@@ -397,6 +585,22 @@ document.addEventListener('DOMContentLoaded', () => {
         ui.detailsModal.closeBtn.addEventListener('click', handlers.closeDetailsModal);
         ui.detailsModal.overlay.addEventListener('click', handlers.closeDetailsModal);
         ui.detailsModal.deleteBtn.addEventListener('click', handlers.handleDeleteBooking);
+
+        // Auth listeners
+        ui.auth.loginBtn.addEventListener('click', handlers.showLoginModal);
+        ui.auth.logoutBtn.addEventListener('click', handlers.handleLogout);
+        ui.loginModal.closeBtn.addEventListener('click', handlers.closeLoginModal);
+        ui.loginModal.loginForm.addEventListener('submit', handlers.handleLoginSubmit);
+        ui.loginModal.registerForm.addEventListener('submit', handlers.handleRegisterSubmit);
+        ui.loginModal.element.querySelector('.modal-overlay').addEventListener('click', handlers.closeLoginModal);
+        ui.loginModal.showRegisterBtn.addEventListener('click', () => {
+            hide(ui.loginModal.loginView);
+            show(ui.loginModal.registerView);
+        });
+        ui.loginModal.showLoginBtn.addEventListener('click', () => {
+            hide(ui.loginModal.registerView);
+            show(ui.loginModal.loginView);
+        });
 
         ui.modal.dateInput.addEventListener('change', (e) => timeline.loadBookedBlocks(e.target.value));
         
@@ -407,14 +611,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
+                if (!ui.loginModal.element.classList.contains('hidden')) handlers.closeLoginModal();
                 if (!ui.modal.element.classList.contains('hidden')) handlers.closeModal();
                 if (!ui.detailsModal.element.classList.contains('hidden')) handlers.closeDetailsModal();
             }
         });
 
         // Initial Data Load
+        updateAuthState();
         load.spaces();
-        load.bookings();
     }
 
     initialize();

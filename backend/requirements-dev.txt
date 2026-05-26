@@ -5,3 +5,5 @@ flake8==6.1.0
 mypy==1.7.0
 ipython==8.17.2
 debugpy==1.8.0
+hypothesis==6.98.12
+httpx==0.25.1

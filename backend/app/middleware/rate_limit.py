@@ -14,15 +14,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if not settings.RATE_LIMIT_ENABLED or redis_client is None:
             return await call_next(request)
             
-        client_ip = request.client.host if request.client else "unknown"
+        # Prioritize X-Forwarded-For header to get the real client IP behind a proxy.
+        # The header can be a comma-separated list, so we take the first IP.
+        forwarded_for = request.headers.get("x-forwarded-for")
+        if forwarded_for:
+            client_ip = forwarded_for.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
         
-        # Parse the configured rate limit (e.g., "100/hour" or "10/minute")
         try:
             limit_str, window_str = settings.RATE_LIMIT_DEFAULT.split("/")
             limit = int(limit_str)
             window = 3600 if window_str == "hour" else 60
         except ValueError:
-            limit, window = 100, 3600  # Fallback defaults
+            limit, window = 100, 3600
             
         key = f"rate_limit:{client_ip}:{int(time.time() / window)}"
         

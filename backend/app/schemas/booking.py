@@ -5,7 +5,7 @@ from pydantic import BaseModel
 
 class BookingCreate(BaseModel):
     """Pydantic model for booking creation."""
-    user_id: uuid.UUID
+    user_id: Optional[uuid.UUID] = None
     room_id: uuid.UUID
     start_time: datetime
     end_time: datetime

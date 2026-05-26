@@ -6,7 +6,11 @@ pydantic==2.5.0
 pydantic-settings==2.1.0
 python-dotenv==1.0.0
 redis==7.4.0
-
+passlib==1.7.4
 structlog==24.1.0
-
 cors==1.0.1
+PyJWT==2.8.0
+python-multipart==0.0.6
+pytest
+hypothesis==6.98.12
+httpx==0.25.1
